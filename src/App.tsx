@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, BackHandler } from 'react-native';
-import { loadInterstitialAd } from '@apps-in-toss/framework';
 import { useMissionState } from './hooks/useMissionState';
 import MissionCard from './screens/MissionCard';
 import MissionProgress from './screens/MissionProgress';
@@ -13,7 +12,7 @@ import PreviewModal from './components/PreviewModal';
 import Snackbar from './components/Snackbar';
 import { AD_GROUP_ID } from './config/env';
 import { getTomorrowMission } from './data/missions';
-import { safeShowInterstitialAd } from './utils/adUtils';
+import { safeShowInterstitialAd, preloadFullScreenAd } from './utils/adUtils';
 
 export default function AppNavigator() {
   const {
@@ -72,7 +71,7 @@ export default function AppNavigator() {
   useEffect(() => {
     if (AD_GROUP_ID && !adPreloaded.current && !state.isPremium) {
       adPreloaded.current = true;
-      void loadInterstitialAd({ adGroupId: AD_GROUP_ID }).catch(() => {});
+      preloadFullScreenAd(AD_GROUP_ID);
     }
   }, [state.isPremium]);
 

@@ -1,7 +1,6 @@
 import {
-  showRewardedAd,
-  showInterstitialAd,
-  loadInterstitialAd,
+  showFullScreenAd,
+  loadFullScreenAd,
 } from '@apps-in-toss/framework';
 
 /** 네트워크 상태 감지 */
@@ -24,18 +23,28 @@ export const safeShowRewardedAd = async (
     return;
   }
 
-  try {
-    await showRewardedAd({ adGroupId });
-    onSuccess();
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : '';
-    const isCancelled = message.includes('cancel');
-    if (!isCancelled) {
-      onSuccess(); // 광고 실패지만 보상 지급
-    } else {
-      onFail?.(); // 유저가 직접 닫음
-    }
-  }
+  return new Promise<void>((resolve) => {
+    const cleanup = showFullScreenAd({
+      options: { adGroupId },
+      onEvent: (event) => {
+        if (event.type === 'dismissed') {
+          onSuccess();
+          resolve();
+        }
+      },
+      onError: (e: unknown) => {
+        const message = e instanceof Error ? e.message : '';
+        const isCancelled = message.includes('cancel') || message.includes('USER_CANCELED');
+        if (!isCancelled) {
+          onSuccess(); // 광고 실패지만 보상 지급
+        } else {
+          onFail?.(); // 유저가 직접 닫음
+        }
+        resolve();
+      },
+    });
+    void cleanup;
+  });
 };
 
 /**
@@ -48,12 +57,29 @@ export const safeShowInterstitialAd = async (
 ): Promise<void> => {
   if (!isOnline()) return;
 
-  try {
-    await showInterstitialAd({ adGroupId });
-  } catch {
-    // 실패 시 조용히 스킵
-  }
+  return new Promise<void>((resolve) => {
+    const cleanup = showFullScreenAd({
+      options: { adGroupId },
+      onEvent: (event) => {
+        if (event.type === 'dismissed') {
+          resolve();
+        }
+      },
+      onError: () => {
+        resolve(); // 실패 시 조용히 스킵
+      },
+    });
+    void cleanup;
+  });
+};
 
-  // 다음을 위해 사전 로딩
-  void loadInterstitialAd({ adGroupId }).catch(() => {});
+/**
+ * 전면 광고 사전 로딩
+ */
+export const preloadFullScreenAd = (adGroupId: string): void => {
+  loadFullScreenAd({
+    options: { adGroupId },
+    onEvent: () => {},
+    onError: () => {},
+  });
 };

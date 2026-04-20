@@ -6,7 +6,7 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import { requestPayment } from '@apps-in-toss/framework';
+import { IAP } from '@apps-in-toss/framework';
 import { theme } from '../theme';
 import { MISSION_PACKS, PREMIUM_PLAN, type MissionPack } from '../data/missionPacks';
 import BannerAd from './BannerAd';
@@ -29,42 +29,46 @@ export default function MissionPacks({
   onGoHome,
 }: MissionPacksProps) {
   const handleBuyPack = useCallback(
-    async (pack: MissionPack) => {
+    (pack: MissionPack) => {
       if (isPremium || purchasedPacks.includes(pack.id)) return;
 
-      try {
-        await requestPayment({
+      IAP.createOneTimePurchaseOrder({
+        options: {
           productId: pack.id,
-          productName: `${pack.emoji} ${pack.name}`,
-          amount: pack.price,
-        });
-        onPurchasePack(pack.id);
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : '';
-        if (!msg.includes('cancel')) {
-          onPaymentError('결제에 실패했어요. 잔액을 확인하고 다시 시도해주세요.');
-        }
-      }
+          processProductGrant: () => true,
+        },
+        onEvent: () => {
+          onPurchasePack(pack.id);
+        },
+        onError: (e: unknown) => {
+          const msg = e instanceof Error ? e.message : String(e);
+          if (!msg.includes('USER_CANCELED')) {
+            onPaymentError('결제에 실패했어요. 잔액을 확인하고 다시 시도해주세요.');
+          }
+        },
+      });
     },
     [isPremium, purchasedPacks, onPurchasePack, onPaymentError],
   );
 
-  const handleBuyPremium = useCallback(async () => {
+  const handleBuyPremium = useCallback(() => {
     if (isPremium) return;
 
-    try {
-      await requestPayment({
+    IAP.createOneTimePurchaseOrder({
+      options: {
         productId: PREMIUM_PLAN.id,
-        productName: `${PREMIUM_PLAN.emoji} ${PREMIUM_PLAN.name}`,
-        amount: PREMIUM_PLAN.price,
-      });
-      onPurchasePremium();
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '';
-      if (!msg.includes('cancel')) {
-        onPaymentError('결제에 실패했어요. 잔액을 확인하고 다시 시도해주세요.');
-      }
-    }
+        processProductGrant: () => true,
+      },
+      onEvent: () => {
+        onPurchasePremium();
+      },
+      onError: (e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!msg.includes('USER_CANCELED')) {
+          onPaymentError('결제에 실패했어요. 잔액을 확인하고 다시 시도해주세요.');
+        }
+      },
+    });
   }, [isPremium, onPurchasePremium, onPaymentError]);
 
   return (
