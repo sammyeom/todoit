@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "ait dev",
+    "dev": "granite dev",
     "build": "ait build",
     "typecheck": "tsc --noEmit"
   },
